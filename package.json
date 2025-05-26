@@ -1,0 +1,16 @@
+{
+  "name": "calculator-api-tester",
+  "version": "1.0.0",
+  "description": "Test application for Calculator API",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.7"
+  }
+}
