@@ -73,7 +73,7 @@ class CalculatorAPITester {
 const baseUrl = process.env.CALCULATOR_API_URL || "http://localhost:3000";
 const tester = new CalculatorAPITester(baseUrl);
 
-// Run tests and exit with appropriate status code
+// Run tests and exit with appropriate status codes
 tester
   .runAllTests()
   .then((success) => {
