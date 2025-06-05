@@ -45,7 +45,7 @@ The following environment variables need to be set in your GitHub repository:
      TEST_IMAGE: mokshitjain18/drcode-regression-test-runner:latest
 
    jobs:
-     deploy-and-test:
+     regression-test:
        runs-on: ubuntu-latest
        steps:
          - name: Run regression tests
