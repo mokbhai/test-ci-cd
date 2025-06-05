@@ -3,8 +3,14 @@ const axios = require("axios");
 // Helper function for consistent logging
 const log = (message, type = "info") => {
   const timestamp = new Date().toISOString();
-  const prefix = type === "error" ? "❌" : type === "success" ? "✅" : "ℹ️";
+  const prefix = type === "success" ? "✅" : "ℹ️";
   console.log(`[${timestamp}] ${prefix} ${message}`);
+};
+
+// Helper function to handle errors and exit
+const handleError = (error) => {
+  console.error(`[${new Date().toISOString()}] ❌ ${error.message}`);
+  process.exit(1);
 };
 
 // Helper function to format test results
@@ -85,8 +91,7 @@ class RegressionTestRunner {
       log("All tests initiated successfully", "success");
       return true;
     } catch (error) {
-      log(`Failed to run tests: ${error.message}`, "error");
-      throw error;
+      handleError({ message: `Failed to run tests: ${error.message}` });
     }
   }
 
@@ -98,14 +103,13 @@ class RegressionTestRunner {
       );
 
       if (!response.data.data || response.data.data.length === 0) {
-        throw new Error("No test scenarios found for this project");
+        handleError({ message: "No test scenarios found for this project" });
       }
 
       log("Test results retrieved successfully", "success");
       return response.data;
     } catch (error) {
-      log(`Failed to get test results: ${error.message}`, "error");
-      throw error;
+      handleError({ message: `Failed to get test results: ${error.message}` });
     }
   }
 
@@ -118,8 +122,7 @@ class RegressionTestRunner {
       log("Test results retrieved successfully", "success");
       return response.data;
     } catch (error) {
-      log(`Failed to get test results: ${error.message}`, "error");
-      throw error;
+      handleError({ message: `Failed to get test results: ${error.message}` });
     }
   }
 }
@@ -134,12 +137,10 @@ const projectId = process.env.PROJECT_ID;
 const emails = process.env.EMAILS.split(",");
 
 if (!projectId) {
-  log("PROJECT_ID is not set", "error");
-  process.exit(1);
+  handleError({ message: "PROJECT_ID is not set" });
 }
 if (!emails || emails.length === 0) {
-  log("EMAILS is not set", "error");
-  process.exit(1);
+  handleError({ message: "EMAILS is not set" });
 }
 
 const tester = new RegressionTestRunner(baseUrl, projectId, emails);
@@ -157,8 +158,10 @@ tester
   .then((results) => {
     log("Test execution completed", "success");
     log(formatTestResults(results));
+    process.exit(0); // Explicitly exit with success
   })
-  .catch((error) => {
-    log(`Test execution failed: ${error.message}`, "error");
-    process.exit(1);
-  });
+  .catch(handleError);
+
+// Handle uncaught exceptions
+process.on("uncaughtException", handleError);
+process.on("unhandledRejection", handleError);
