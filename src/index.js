@@ -7,6 +7,53 @@ const log = (message, type = "info") => {
   console.log(`[${timestamp}] ${prefix} ${message}`);
 };
 
+// Helper function to format test results
+const formatTestResults = (results) => {
+  if (!results || !results.data) {
+    return "No test results available";
+  }
+
+  const tests = results.data;
+  const summary = {
+    total: tests.length,
+    passed: tests.filter((t) => t.last_run_status === "PASSED").length,
+    failed: tests.filter((t) => t.last_run_status === "FAILED").length,
+    pending: tests.filter((t) => !t.last_run_status).length,
+  };
+
+  let output = "\n📊 Test Results Summary:\n";
+  output += "=====================\n";
+  output += `Total Tests: ${summary.total}\n`;
+  output += `✅ Passed: ${summary.passed}\n`;
+  output += `❌ Failed: ${summary.failed}\n`;
+  output += `⏳ Pending: ${summary.pending}\n\n`;
+
+  output += "📝 Detailed Results:\n";
+  output += "=====================\n";
+
+  tests.forEach((test, index) => {
+    const status =
+      test.last_run_status === "PASSED"
+        ? "✅"
+        : test.last_run_status === "FAILED"
+        ? "❌"
+        : "⏳";
+    const lastRun = test.last_run_at
+      ? new Date(test.last_run_at).toLocaleString()
+      : "Never";
+
+    output += `${index + 1}. ${test.name}\n`;
+    output += `   Status: ${status} ${test.last_run_status || "Not Run"}\n`;
+    output += `   Last Run: ${lastRun}\n`;
+    if (test.description) {
+      output += `   Description: ${test.description}\n`;
+    }
+    output += "\n";
+  });
+
+  return output;
+};
+
 class RegressionTestRunner {
   constructor(baseUrl, projectId, emails) {
     this.baseUrl = baseUrl;
@@ -39,6 +86,25 @@ class RegressionTestRunner {
       return true;
     } catch (error) {
       log(`Failed to run tests: ${error.message}`, "error");
+      throw error;
+    }
+  }
+
+  async getAllTests() {
+    try {
+      log("Fetching all senario tests...");
+      const response = await axios.get(
+        `${this.baseUrl}/api/regressionTest/project/${this.projectId}`
+      );
+
+      if (!response.data.data || response.data.data.length === 0) {
+        throw new Error("No test scenarios found for this project");
+      }
+
+      log("Test results retrieved successfully", "success");
+      return response.data;
+    } catch (error) {
+      log(`Failed to get test results: ${error.message}`, "error");
       throw error;
     }
   }
@@ -76,22 +142,21 @@ if (!emails || emails.length === 0) {
   process.exit(1);
 }
 
-log(`Environment: ${nodeEnv}`);
-log(`Base URL: ${baseUrl}`);
-log(`Project ID: ${projectId}`);
-log(`Number of emails: ${emails.length}`);
-
 const tester = new RegressionTestRunner(baseUrl, projectId, emails);
 
 // Run tests and exit with appropriate status codes
 tester
-  .runAllTests()
+  .getAllTests()
+  .then(() => {
+    log("All tests retrieved successfully", "success");
+    return tester.runAllTests();
+  })
   .then(() => {
     return tester.getTestResults();
   })
   .then((results) => {
     log("Test execution completed", "success");
-    log(`Results: ${JSON.stringify(results, null, 2)}`);
+    log(formatTestResults(results));
   })
   .catch((error) => {
     log(`Test execution failed: ${error.message}`, "error");
