@@ -1,8 +1,17 @@
 const axios = require("axios");
 
-class CalculatorAPITester {
-  constructor(baseUrl) {
+// Helper function for consistent logging
+const log = (message, type = "info") => {
+  const timestamp = new Date().toISOString();
+  const prefix = type === "error" ? "❌" : type === "success" ? "✅" : "ℹ️";
+  console.log(`[${timestamp}] ${prefix} ${message}`);
+};
+
+class RegressionTestRunner {
+  constructor(baseUrl, projectId, emails) {
     this.baseUrl = baseUrl;
+    this.projectId = projectId;
+    this.emails = emails;
     this.axios = axios.create({
       baseURL: baseUrl,
       headers: {
@@ -11,75 +20,80 @@ class CalculatorAPITester {
     });
   }
 
-  async testHealth() {
-    try {
-      const response = await this.axios.get("/health");
-      return response.data.status === "healthy";
-    } catch (error) {
-      console.error("Health check failed:", error.message);
-      return false;
-    }
-  }
-
-  async testSum(num1, num2) {
-    try {
-      const response = await this.axios.post("/api/calculator/sum", {
-        num1,
-        num2,
-      });
-      return response.data.result === num1 + num2;
-    } catch (error) {
-      console.error("Sum test failed:", error.message);
-      return false;
-    }
-  }
-
-  async testMultiply(num1, num2) {
-    try {
-      const response = await this.axios.post("/api/calculator/multiply", {
-        num1,
-        num2,
-      });
-      return response.data.result === num1 * num2;
-    } catch (error) {
-      console.error("Multiply test failed:", error.message);
-      return false;
-    }
-  }
-
   async runAllTests() {
-    console.log("Starting API tests...");
+    try {
+      log(`Starting regression tests for project: ${this.projectId}`);
+      await axios.post(
+        `${this.baseUrl}/api/regressionTest/runAll`,
+        {
+          projectId: this.projectId,
+          emails: this.emails,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      log("All tests initiated successfully", "success");
+      return true;
+    } catch (error) {
+      log(`Failed to run tests: ${error.message}`, "error");
+      throw error;
+    }
+  }
 
-    const healthResult = await this.testHealth();
-    console.log("Health Check:", healthResult ? "PASSED" : "FAILED");
-
-    const sumResult = await this.testSum(5, 3);
-    console.log("Sum Test:", sumResult ? "PASSED" : "FAILED");
-
-    const multiplyResult = await this.testMultiply(5, 3);
-    console.log("Multiply Test:", multiplyResult ? "PASSED" : "FAILED");
-
-    const allPassed = healthResult && sumResult && multiplyResult;
-    console.log(
-      "\nOverall Result:",
-      allPassed ? "ALL TESTS PASSED" : "SOME TESTS FAILED"
-    );
-
-    return allPassed;
+  async getTestResults() {
+    try {
+      log("Fetching test results...");
+      const response = await axios.get(
+        `${this.baseUrl}/api/regressionTest/project/${this.projectId}`
+      );
+      log("Test results retrieved successfully", "success");
+      return response.data;
+    } catch (error) {
+      log(`Failed to get test results: ${error.message}`, "error");
+      throw error;
+    }
   }
 }
 
 // Get the base URL from environment variable or use default
-const baseUrl = process.env.CALCULATOR_API_URL || "http://localhost:3000";
-const tester = new CalculatorAPITester(baseUrl);
+const nodeEnv = process.env.NODE_ENV || "production";
+const baseUrl =
+  nodeEnv === "production"
+    ? "https://api.drcode.ai"
+    : "https://devapi.drcode.ai/testgpt";
+const projectId = process.env.PROJECT_ID;
+const emails = process.env.EMAILS.split(",");
+
+if (!projectId) {
+  log("PROJECT_ID is not set", "error");
+  process.exit(1);
+}
+if (!emails || emails.length === 0) {
+  log("EMAILS is not set", "error");
+  process.exit(1);
+}
+
+log(`Environment: ${nodeEnv}`);
+log(`Base URL: ${baseUrl}`);
+log(`Project ID: ${projectId}`);
+log(`Number of emails: ${emails.length}`);
+
+const tester = new RegressionTestRunner(baseUrl, projectId, emails);
 
 // Run tests and exit with appropriate status codes
 tester
   .runAllTests()
-  .then((success) => {
-    process.exit(success ? 0 : 1);
+  .then(() => {
+    return tester.getTestResults();
+  })
+  .then((results) => {
+    log("Test execution completed", "success");
+    log(`Results: ${JSON.stringify(results, null, 2)}`);
   })
   .catch((error) => {
-    console.error("Test execution failed:", error);
+    log(`Test execution failed: ${error.message}`, "error");
     process.exit(1);
   });
