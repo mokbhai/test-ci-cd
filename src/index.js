@@ -8,7 +8,7 @@ const baseUrl =
     ? "https://api.drcode.ai"
     : "https://devapi.drcode.ai/testgpt";
 const projectId = process.env.PROJECT_ID;
-const emails = process.env.EMAILS.split(",");
+const emails = process.env.EMAILS?.split(",") || [];
 const port = process.env.PORT || 3000;
 const localHost = process.env.LOCAL_HOST || "localhost";
 
