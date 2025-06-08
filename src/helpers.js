@@ -58,7 +58,7 @@ const formatTestResults = (results) => {
   return output;
 };
 
-module.exports = {
+export {
   log,
   handleError,
   formatTestResults,
