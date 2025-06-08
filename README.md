@@ -16,6 +16,22 @@ The following environment variables need to be set in your GitHub repository:
 | `NODE_ENV`   | Environment (development/production)              | No       | development |
 | `PROJECT_ID` | Your DrCode project ID                            | Yes      | -           |
 | `EMAILS`     | Comma-separated list of email addresses to notify | Yes      | -           |
+| `PORT`       | Port number for the local tunnel                  | Yes      | 3000        |
+| `LOCAL_HOST` | Host name for the local tunnel                    | Yes      | localhost   |
+
+## Tunnel Configuration
+
+The test runner supports creating a local tunnel for development environments. This is useful when you need to expose your local server to the internet.
+
+### Using the Tunnel
+
+When the tunnel is created, it will:
+
+1. Create a secure tunnel to your local development server
+2. Provide a public URL that can be accessed from anywhere
+3. Keep the connection alive for the duration of the test run
+
+The tunnel URL will be automatically used as the base URL for API calls in development mode.
 
 ## GitHub Actions Setup
 
@@ -129,6 +145,8 @@ To test locally:
      -e NODE_ENV=development \
      -e PROJECT_ID=your_project_id \
      -e EMAILS=your-email@example.com \
+     -e PORT=3000 \
+     -e LOCAL_HOST=localhost \
      --name drcode-regression-test-runner \
      mokshitjain18/drcode-regression-test-runner:v1
    ```
@@ -153,8 +171,15 @@ To test locally:
    - Ensure the EMAILS variable is properly formatted
 
 3. **No logs visible**:
+
    - The workflow includes a separate step to show logs
    - Check the GitHub Actions logs for the "Check container logs" step
+
+4. **Tunnel issues**:
+   - Verify the PORT is correct and matches your application's port
+   - Check if the LOCAL_HOST is properly configured
+   - Ensure your application is running and accessible on the specified port
+   - Check the logs for any tunnel-related errors
 
 ## Support
 
