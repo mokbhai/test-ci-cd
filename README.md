@@ -18,6 +18,7 @@ The following environment variables need to be set in your GitHub repository:
 | `EMAILS`     | Comma-separated list of email addresses to notify | Yes      | -           |
 | `PORT`       | Port number for the local tunnel                  | Yes      | 3000        |
 | `LOCAL_HOST` | Host name for the local tunnel                    | Yes      | localhost   |
+| `PREFIX`     | URL path prefix for the API endpoints             | No       | ""          |
 
 ## Tunnel Configuration
 
@@ -30,8 +31,19 @@ When the tunnel is created, it will:
 1. Create a secure tunnel to your local development server
 2. Provide a public URL that can be accessed from anywhere
 3. Keep the connection alive for the duration of the test run
+4. Automatically append the PREFIX to the tunnel URL if specified
 
 The tunnel URL will be automatically used as the base URL for API calls in development mode.
+
+### URL Prefix Handling
+
+The `PREFIX` environment variable allows you to specify a path prefix for your API endpoints. For example:
+
+- If `PREFIX` is set to `/api/v1`, the final URL will be: `https://your-tunnel-url/api/v1`
+- If `PREFIX` is set to `api/v1/`, the final URL will be: `https://your-tunnel-url/api/v1`
+- If `PREFIX` is not set, the tunnel URL will be used as is
+
+The prefix is automatically cleaned (removing leading and trailing slashes) to ensure proper URL formatting.
 
 ## GitHub Actions Setup
 
@@ -147,6 +159,7 @@ To test locally:
      -e EMAILS=your-email@example.com \
      -e PORT=3000 \
      -e LOCAL_HOST=localhost \
+     -e PREFIX=api/v1 \
      --name drcode-regression-test-runner \
      mokshitjain18/drcode-regression-test-runner:v1
    ```
@@ -169,6 +182,7 @@ To test locally:
    - Verify the PROJECT_ID is correct
    - Check if the API endpoints are accessible
    - Ensure the EMAILS variable is properly formatted
+   - Verify the PREFIX is correctly set if your API requires it
 
 3. **No logs visible**:
 
@@ -180,6 +194,7 @@ To test locally:
    - Check if the LOCAL_HOST is properly configured
    - Ensure your application is running and accessible on the specified port
    - Check the logs for any tunnel-related errors
+   - Verify the PREFIX is correctly formatted if specified
 
 ## Support
 
