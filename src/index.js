@@ -48,8 +48,14 @@ try {
 
   const results = await tester.getTestResults();
   log("Test execution completed", "success");
-  log(formatTestResults(results));
-  process.exit(0); // Explicitly exit with success
+  const { output, summary } = formatTestResults(results);
+  log(output);
+  if (summary.failed > 0) {
+    log("Test failed", "error");
+    process.exit(1); // Explicitly exit with failure
+  } else {
+    process.exit(0); // Explicitly exit with success
+  }
 } catch (error) {
   handleError(error);
 }

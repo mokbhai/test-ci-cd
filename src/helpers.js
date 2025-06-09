@@ -55,7 +55,7 @@ const formatTestResults = (results) => {
     output += "\n";
   });
 
-  return output;
+  return { output, summary };
 };
 
 export {
