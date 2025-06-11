@@ -1,5 +1,7 @@
 import { log, handleError, formatTestResults } from "./helpers.js";
 import RegressionTestRunner from "./test-runner.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 // Get the base URL from environment variable or use default
 const nodeEnv = process.env.NODE_ENV || "production";
@@ -35,28 +37,60 @@ const tester = new RegressionTestRunner(
   localHost
 );
 
+// Function to check if tunnel is healthy
+async function checkTunnelHealth(tunnelUrl, maxRetries = 5) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(tunnelUrl);
+      if (response.ok) {
+        return true;
+      }
+    } catch (error) {
+      log(
+        `Tunnel health check attempt ${i + 1} failed: ${error.message}`,
+        "warning"
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds between retries
+  }
+  return false;
+}
+
 // Run tests and exit with appropriate status codes
 (async () => {
-  const tunnelUrl = await tester.createTunnel();
-  log(`Tunnel created successfully: ${tunnelUrl}`, "success");
-  await new Promise((resolve) => setTimeout(resolve, 10000));
+  try {
+    const tunnelUrl = await tester.createTunnel();
 
-  await tester
-    .getAllTests()
-    .then(() => {
-      log("All tests retrieved successfully", "success");
-      return tester.runAllTests();
-    })
-    .then(() => {
-      return tester.getTestResults();
-    })
-    .then((results) => {
-      log("Test execution completed", "success");
-      log(formatTestResults(results));
-      process.exit(0); // Explicitly exit with success
-    })
-    .catch(handleError);
+    // Wait for tunnel to be healthy
+    const isHealthy = await checkTunnelHealth(tunnelUrl);
+    if (!isHealthy) {
+      throw new Error(
+        "Tunnel failed to establish a healthy connection after multiple retries"
+      );
+    }
+
+    log("Tunnel is healthy and ready to use", "success");
+
+    await tester
+      .getAllTests()
+      .then(() => {
+        log("All tests retrieved successfully", "success");
+        return tester.runAllTests();
+      })
+      .then(() => {
+        return tester.getTestResults();
+      })
+      .then((results) => {
+        log("Test execution completed", "success");
+        log(formatTestResults(results));
+        process.exit(0); // Explicitly exit with success
+      })
+      .catch(handleError);
+  } catch (error) {
+    handleError(error);
+  }
 })();
+
 // Handle uncaught exceptions
 process.on("uncaughtException", handleError);
 process.on("unhandledRejection", handleError);
