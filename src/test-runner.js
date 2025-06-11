@@ -1,18 +1,17 @@
 import { log, handleError } from "./helpers.js";
 import axios from "axios";
-import createTunnel from "./tunnel.js";
+import localtunnel from "localtunnel";
 
 class RegressionTestRunner {
-  constructor(baseUrl, projectId, emails, port, localHost, prefix) {
+  tunnelUrl = null;
+  constructor(baseUrl, projectId, emails, port, localHost) {
     this.port = port;
     this.localHost = localHost;
     this.baseUrl = baseUrl;
     this.projectId = projectId;
     this.emails = emails;
-    this.prefix = prefix;
-    this.tunnelUrl = null;
     this.axios = axios.create({
-      baseURL: this.baseUrl,
+      baseURL: baseUrl,
       headers: {
         "Content-Type": "application/json",
       },
@@ -27,7 +26,6 @@ class RegressionTestRunner {
         {
           projectId: this.projectId,
           emails: this.emails,
-          baseUrl: this.tunnelUrl,
         },
         {
           headers: {
@@ -44,12 +42,6 @@ class RegressionTestRunner {
 
   async getAllTests() {
     try {
-      this.tunnelUrl = await createTunnel(this.port, this.localHost);
-      if (this.prefix && this.prefix !== "") {
-        this.prefix = this.prefix.replace(/^\/+|\/+$/g, "");
-        this.tunnelUrl = `${this.tunnelUrl}/${this.prefix}`;
-      }
-
       log("Fetching all senario tests...");
       const response = await axios.get(
         `${this.baseUrl}/api/regressionTest/project/${this.projectId}`
@@ -76,6 +68,25 @@ class RegressionTestRunner {
       return response.data;
     } catch (error) {
       handleError({ message: `Failed to get test results: ${error.message}` });
+    }
+  }
+
+  async createTunnel() {
+    try {
+      const tunnel = await localtunnel({
+        port: this.port,
+        local_host: this.localHost,
+        subdomain: `drcode-${Date.now()}`,
+      });
+      this.tunnelUrl = tunnel.url;
+      log(`Tunnel created: ${this.tunnelUrl}`, "success");
+
+      // Keep process alive
+      setInterval(() => {}, 1000);
+
+      return this.tunnelUrl;
+    } catch (error) {
+      handleError({ message: `Failed to create tunnel: ${error.message}` });
     }
   }
 }

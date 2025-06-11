@@ -1,10 +1,9 @@
-import "dotenv/config";
 import { log, handleError, formatTestResults } from "./helpers.js";
 import RegressionTestRunner from "./test-runner.js";
 
 // Get the base URL from environment variable or use default
 const nodeEnv = process.env.NODE_ENV || "production";
-let baseUrl =
+const baseUrl =
   nodeEnv === "production"
     ? "https://api.drcode.ai"
     : "https://devapi.drcode.ai/testgpt";
@@ -12,7 +11,6 @@ const projectId = process.env.PROJECT_ID;
 const emails = process.env.EMAILS?.split(",") || [];
 const port = process.env.PORT || 3000;
 const localHost = process.env.LOCAL_HOST || "localhost";
-const prefix = process.env.PREFIX || "";
 
 if (!projectId) {
   handleError({ message: "PROJECT_ID is not set" });
@@ -34,32 +32,31 @@ const tester = new RegressionTestRunner(
   projectId,
   emails,
   port,
-  localHost,
-  prefix
+  localHost
 );
 
 // Run tests and exit with appropriate status codes
-try {
-  await tester.getAllTests();
-  log("All tests retrieved successfully", "success");
+(async () => {
+  const tunnelUrl = await tester.createTunnel();
+  log(`Tunnel created successfully: ${tunnelUrl}`, "success");
+  await new Promise((resolve) => setTimeout(resolve, 10000));
 
-  await tester.runAllTests();
-  log("All tests initiated successfully", "success");
-
-  const results = await tester.getTestResults();
-  log("Test execution completed", "success");
-  const { output, summary } = formatTestResults(results);
-  log(output);
-  if (summary.failed > 0) {
-    log("Test failed", "error");
-    process.exit(1); // Explicitly exit with failure
-  } else {
-    process.exit(0); // Explicitly exit with success
-  }
-} catch (error) {
-  handleError(error);
-}
-
+  await tester
+    .getAllTests()
+    .then(() => {
+      log("All tests retrieved successfully", "success");
+      return tester.runAllTests();
+    })
+    .then(() => {
+      return tester.getTestResults();
+    })
+    .then((results) => {
+      log("Test execution completed", "success");
+      log(formatTestResults(results));
+      process.exit(0); // Explicitly exit with success
+    })
+    .catch(handleError);
+})();
 // Handle uncaught exceptions
 process.on("uncaughtException", handleError);
 process.on("unhandledRejection", handleError);
