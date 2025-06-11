@@ -8,11 +8,24 @@ const createTunnel = async (port, localHost) => {
     const options = {
       port: parseInt(port),
       local_host: localHost,
+      allow_invalid_cert: true,
+      subdomain: `drcode-${Date.now()}`,
+      retry: {
+        min: 1000,
+        max: 5000,
+        retries: 5,
+      },
     };
 
     log(`Tunnel options: ${JSON.stringify(options)}`, "info");
 
-    const tunnel = await localtunnel(options);
+    // Add connection timeout
+    const tunnelPromise = localtunnel(options);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Tunnel connection timeout")), 30000);
+    });
+
+    const tunnel = await Promise.race([tunnelPromise, timeoutPromise]);
     log("Tunnel object created", "info");
 
     if (!tunnel) {
@@ -36,6 +49,23 @@ const createTunnel = async (port, localHost) => {
       log(`Tunnel error occurred: ${err.message}`, "error");
       handleError({ message: `Tunnel error: ${err.message}` });
     });
+
+    // Keep the process running
+    process.on("SIGINT", () => {
+      log("Received SIGINT. Closing tunnel...", "info");
+      tunnel.close();
+      process.exit(0);
+    });
+
+    process.on("SIGTERM", () => {
+      log("Received SIGTERM. Closing tunnel...", "info");
+      tunnel.close();
+      process.exit(0);
+    });
+
+    // Wait for tunnel to be ready
+    log("Waiting for tunnel to be ready...");
+    await new Promise((resolve) => setTimeout(resolve, 5000));
 
     return tunnelUrl;
   } catch (error) {
