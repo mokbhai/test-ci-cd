@@ -76,8 +76,7 @@ class RegressionTestRunner {
       const tunnel = await localtunnel({
         port: this.port,
         local_host: this.localHost,
-        host: "http://localhost:3000",
-        subdomain: `localtest-${Date.now()}`,
+        subdomain: `drcode-${Date.now()}`,
       });
       this.tunnelUrl = tunnel.url;
       log(`Tunnel created: ${this.tunnelUrl}`, "success");
